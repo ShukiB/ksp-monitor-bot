@@ -94,7 +94,8 @@ def main():
     print("🔍 Starting KSP monitor bot (daily 11 AM Israel reminder)...")
     while True:
         check_ksp()
-        time.sleep(30)  # every 5 minutes
+        time.sleep(300)  # every 5 minutes
 
 if __name__ == "__main__":
     main()
+
