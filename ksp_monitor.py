@@ -46,42 +46,18 @@ HEADERS = {
     )
 }
 
-def send_full_json_to_telegram(data):
-    try:
-        # Convert JSON (dict) to a string
-        message = json.dumps(data, ensure_ascii=False, indent=2)  # pretty print
-        # Telegram has a max message length (~4096 chars)
-        if len(message) > 4000:
-            message = message[:4000] + "\n\n...truncated..."
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={"chat_id": CHAT_ID, "text": message},
-            timeout=10
-        )
-    except Exception as e:
-        print(f"⚠️ Failed to send JSON to Telegram: {e}")
-
 def check_ksp():
     global last_total, last_daily_date
     try:
         response = requests.get(URL, headers=HEADERS, timeout=10)
-        send_telegram_message("✅ requests.get(URL, headers=HEADERS, timeout=10) ran succesfuly.")
-        
-        data = response.json()
-        # Send entire KSP JSON to Telegram
-        send_full_json_to_telegram(data)
-        
         response.raise_for_status()
-        send_telegram_message("✅ response.raise_for_status() ran succesfuly.")
         data = response.json()
-        send_telegram_message("✅ data = response.json() ran succesfuly.")
 
         # Correct path to products_total inside result
         total = data.get("result", {}).get("products_total", None)
-        send_telegram_message("✅ total = data.get(result, {}).get(products_total, None) ran succesfuly.")
 
         if total is None:
-            print("products_total is null in response.")
+            send_telegram_message(f"Could Not Find Phantasmal Flames Products.")
             return
 
         now_date = datetime.now(ISRAEL_TZ).date()
