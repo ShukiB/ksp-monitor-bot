@@ -44,7 +44,9 @@ def check_ksp():
         response = requests.get(URL, timeout=10)
         response.raise_for_status()
         data = response.json()
-        total = data.get("products_total")
+
+        # --- Adjusted path to products_total inside result ---
+        total = data.get("result", {}).get("products_total", None)
 
         if total is None:
             print("products_total is null in response.")
