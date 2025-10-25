@@ -41,15 +41,21 @@ def check_ksp():
     global last_total, last_daily_date
 
     try:
-        response = requests.get(URL, timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/117.0.0.0 Safari/537.36"
+        }
+
+        response = requests.get(URL, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        # --- Adjusted path to products_total inside result ---
+        # Correct path to products_total
         total = data.get("result", {}).get("products_total", None)
 
         if total is None:
-            print("products_total is null in response.")
+            print("Could Not Find Phantasmal Flames Products.")
             return
 
         now_date = datetime.now(ISRAEL_TZ).date()
@@ -83,11 +89,12 @@ def check_ksp():
     except Exception as e:
         send_telegram_message(f"❌ Error checking KSP: {e}")
 
+
 def main():
     print("🔍 Starting KSP monitor bot (daily 11 AM Israel reminder)...")
     while True:
         check_ksp()
-        time.sleep(300)  # every 5 minutes
+        time.sleep(30)  # every 5 minutes
 
 if __name__ == "__main__":
     main()
