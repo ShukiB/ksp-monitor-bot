@@ -2,10 +2,12 @@ import os
 import requests
 import time
 from datetime import datetime, timedelta, timezone
+from flask import Flask
 
 # === Environment variables ===
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+PORT = int(os.getenv("PORT", 10000))  # Render assigns $PORT
 
 if not BOT_TOKEN or not CHAT_ID:
     raise ValueError("❌ BOT_TOKEN and CHAT_ID must be set as environment variables")
@@ -20,8 +22,8 @@ last_daily_date = None
 # === Israel time zone (UTC+3) ===
 ISRAEL_TZ = timezone(timedelta(hours=3))
 
+# === Telegram alert ===
 def send_telegram_message(message: str):
-    """Send a message via Telegram bot"""
     try:
         requests.post(
             f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
@@ -32,30 +34,30 @@ def send_telegram_message(message: str):
         print(f"⚠️ Failed to send Telegram message: {e}")
 
 def is_11am_israel():
-    """Check if it's around 11:00 AM Israel time"""
     now = datetime.now(ISRAEL_TZ)
-    return now.hour == 11 and now.minute < 5  # 5-minute grace window
+    return now.hour == 11 and now.minute < 5
+
+# --- Add browser User-Agent to avoid 403 ---
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/117.0.0.0 Safari/537.36"
+    )
+}
 
 def check_ksp():
-    """Check KSP API and send alerts"""
     global last_total, last_daily_date
-
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/117.0.0.0 Safari/537.36"
-        }
-
-        response = requests.get(URL, headers=headers, timeout=10)
+        response = requests.get(URL, headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        # Correct path to products_total
+        # Correct path to products_total inside result
         total = data.get("result", {}).get("products_total", None)
 
         if total is None:
-            print("Could Not Find Phantasmal Flames Products.")
+            print("products_total is null in response.")
             return
 
         now_date = datetime.now(ISRAEL_TZ).date()
@@ -64,8 +66,6 @@ def check_ksp():
         if last_total is None:
             if total > 0:
                 send_telegram_message(f"🔥 Found {total} products for 'Phantasmal Flames' on first check!")
-            else:
-                print(f"Initial check: no products (products_total={total})")
             last_total = total
             last_daily_date = now_date
             return
@@ -78,7 +78,7 @@ def check_ksp():
             last_total = total
             last_daily_date = now_date
 
-        # Daily reminder at 11 AM Israel time
+        # Daily 11AM Israel alert
         elif is_11am_israel() and last_daily_date != now_date:
             send_telegram_message(f"🕒 Daily update: {total} products currently for 'Phantasmal Flames'.")
             last_daily_date = now_date
@@ -89,13 +89,23 @@ def check_ksp():
     except Exception as e:
         send_telegram_message(f"❌ Error checking KSP: {e}")
 
-
-def main():
-    print("🔍 Starting KSP monitor bot (daily 11 AM Israel reminder)...")
+# === Background loop ===
+def background_loop():
     while True:
         check_ksp()
-        time.sleep(300)  # every 5 minutes
+        time.sleep(300)  # 5 minutes
+
+# === Minimal HTTP server for Render ===
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+    return "KSP Monitor is running 🚀"
 
 if __name__ == "__main__":
-    main()
-
+    from threading import Thread
+    # Start the background checker in a separate thread
+    t = Thread(target=background_loop, daemon=True)
+    t.start()
+    # Start the web server so Render detects a bound port
+    app.run(host="0.0.0.0", port=PORT)
