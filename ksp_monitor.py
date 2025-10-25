@@ -50,15 +50,15 @@ def check_ksp():
     global last_total, last_daily_date
     try:
         response = requests.get(URL, headers=HEADERS, timeout=10)
-        print("✅ requests.get(URL, headers=HEADERS, timeout=10) ran succesfuly.")
+        send_telegram_message("✅ requests.get(URL, headers=HEADERS, timeout=10) ran succesfuly.")
         response.raise_for_status()
-        print("✅ response.raise_for_status() ran succesfuly.")
+        send_telegram_message("✅ response.raise_for_status() ran succesfuly.")
         data = response.json()
-        print("✅ data = response.json() ran succesfuly.")
+        send_telegram_message("✅ data = response.json() ran succesfuly.")
 
         # Correct path to products_total inside result
         total = data.get("result", {}).get("products_total", None)
-        print("✅ total = data.get(result, {}).get(products_total, None) ran succesfuly.")
+        send_telegram_message("✅ total = data.get(result, {}).get(products_total, None) ran succesfuly.")
 
         if total is None:
             print("products_total is null in response.")
@@ -113,3 +113,4 @@ if __name__ == "__main__":
     t.start()
     # Start the web server so Render detects a bound port
     app.run(host="0.0.0.0", port=PORT)
+
